@@ -1,0 +1,47 @@
+{
+  "vmName": {
+    "value": "cc16-marketplace"
+  },
+  "vmSize": {
+    "value": "Standard_D1_v2"
+  },
+  "authenticationType": {
+    "value": "password"
+  },
+  "adminUsername": {
+    "value": "adminuser"
+  },
+  "adminPassword": {
+    "value": "P@ssword12345678"
+  },
+  "lastName": {
+    "value": "Lname"
+  },
+  "firstName": {
+    "value": "Fname"
+  },
+  "ownerEmail": {
+    "value": "ownerEmail"
+  },
+  "companyName": {
+    "value": "companyName"
+  },
+  "phoneHomeEndpoint": {
+    "value": "https://portal-dev.bravo.cloudcruiser.com/"
+  },
+  "storageAccountNewOrExisting": {
+    "value": "new"
+  },
+  "storageAccountName": {
+    "value": "cc16deployments"
+  },
+  "storageAccountType": {
+    "value": "Standard_LRS"
+  },
+  "existingStorageAccountRG": {
+    "value": "cc16marketplace"
+  },
+  "imageSourceType": {
+    "value": "storageAccount"
+  }
+}

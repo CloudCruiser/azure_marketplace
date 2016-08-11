@@ -1,0 +1,6 @@
+<ns0:Environment xmlns:ns0="http://schemas.dmtf.org/ovf/environment/1" xmlns:ns1="http://schemas.microsoft.com/windowsazure" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+    <ns1:ProvisioningSection><ns1:Version>1.0</ns1:Version><ns1:LinuxProvisioningConfigurationSet><ns1:ConfigurationSetType>LinuxProvisioningConfiguration</ns1:ConfigurationSetType><ns1:HostName>dev-marketplace-custom-data</ns1:HostName><ns1:UserName>babrams</ns1:UserName><ns1:DisableSshPasswordAuthentication>true</ns1:DisableSshPasswordAuthentication><ns1:SSH><ns1:PublicKeys><ns1:PublicKey><ns1:Fingerprint>8ACCB7EBCB37DDBA8EC6C720141D7083F232F4C0</ns1:Fingerprint><ns1:Path>/home/babrams/.ssh/authorized_keys</ns1:Path></ns1:PublicKey></ns1:PublicKeys></ns1:SSH><ns1:CustomData>Q09NUEFOWV9OQU1FPSJTT01FX1RFU1RfQ09NUEFOWSIKRklSU1RfTkFNRT0iU09NRV9GSVJTVF9OQU1FIgpMQVNUX05BTUU9IlNPTUVfTEFTVF9OQU1FIgpPV05FUl9FTUFJTD0iU09NRV9FTUFJTCIK</ns1:CustomData></ns1:LinuxProvisioningConfigurationSet></ns1:ProvisioningSection>
+
+  <ns1:PlatformSettingsSection><ns1:Version>1.0</ns1:Version><ns1:PlatformSettings><ns1:KmsServerHostname>kms.core.windows.net</ns1:KmsServerHostname><ns1:ProvisionGuestAgent>false</ns1:ProvisionGuestAgent><ns1:GuestAgentPackageName xsi:nil="true" /></ns1:PlatformSettings></ns1:PlatformSettingsSection>
+</ns0:Environment>

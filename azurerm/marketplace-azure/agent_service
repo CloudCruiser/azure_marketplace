@@ -1,0 +1,185 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides: agent_service
+# Required-Start: $remote_fs $syslog
+# Required-Stop: $remote_fs $syslog
+# Default-Start: 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: agent_service for CloudCruiser microservice
+# Description: This file starts and stops the agent_service for CloudCruiser microservice
+#
+### END INIT INFO
+
+# dont try to start/stop service if cloud-init has not finished
+# we need the "custom"/userdata available and complete
+# for the service to function properly on boot.
+echo 'waiting for cloud-init'
+while [ ! -s /var/lib/cloud/instance/user-data.txt ]; do
+  printf '.'
+  sleep 1;
+done
+
+PID_DIR=/var/run/agent_service
+PID_FILE=$PID_DIR/agent_service.pid
+KILL_TIMEOUT=30
+KILL_RETRY_INTERVAL=5
+
+CC_SERVICE_NAME=agent_service
+CC_SERVICE_USER=ccservice
+CC_SERVICE_GROUP=ccservice
+CC_SERVICE_HOME=/usr/local/cc-service/agent_service
+
+# parse custom data to create /etc/default/agent_service.env
+/usr/local/bin/parse-azure-custom-data.rb
+
+# load environment variables for dropwizard yaml
+[ -r /etc/default/agent_service.env ] && . /etc/default/agent_service.env
+
+CC_SERVICE_ARGS="-Xms3096m -Xmx3096m"
+CC_SERVICE_ARGS="$CC_SERVICE_ARGS ${JAVA_OPTS}"
+CC_SERVICE_ARGS="$CC_SERVICE_ARGS -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/var/log/cc/agent_service/agent_service.hprof"
+CC_SERVICE_ARGS="$CC_SERVICE_ARGS -jar /usr/local/cc-service/agent_service/agent.service.jar"
+CC_SERVICE_ARGS="$CC_SERVICE_ARGS server"
+CC_SERVICE_ARGS="$CC_SERVICE_ARGS /usr/local/cc-service/agent_service/agent.service.yaml"
+
+#CC_SERVICE_CMD="java $CC_SERVICE_ARGS"
+jarname="agent_service.jar"
+# we could strip out the version using bash string subsitution
+# but I am not confident about our naming convention changing
+# this could be a valid appraoch: basename="${jarname%%-*}"
+# which strips out the version of jar name by '%%' which will
+# delete the longest match of substring from existing string
+# http://tldp.org/LDP/abs/html/string-manipulation.html
+basename=`echo $jarname | cut -d\- -f1`
+
+# load lsb init functions
+. /lib/lsb/init-functions
+
+# load default settings for init scripts
+if [ -r /etc/default/rcS ]; then
+  . /etc/default/rcS
+fi
+
+function checkJava() {
+  if [ -x "$JAVA_HOME/bin/java" ]; then
+    JAVA="$JAVA_HOME/bin/java"
+  else
+    JAVA=$(which java)
+  fi
+
+  if [ ! -x "$JAVA" ]; then
+    echo "Could not find any executable java binary. Please install java in your PATH or set JAVA_HOME"
+    exit 1
+  fi
+}
+
+# function to start the service
+function start_service()
+{
+  local result
+
+  log_daemon_msg "Starting microservice $CC_SERVICE_NAME"
+  pid=$(pidofproc -p "$PID_FILE" "$CC_SERVICE_NAME" || pgrep -f "${basename}.*.jar")
+
+  if [ -n "$pid" ] ; then
+    log_warning_msg "Already running"
+    log_end_msg 0
+    exit 0
+  fi
+
+  # Ensure that the PID_DIR exists (it is cleaned at OS startup time)
+  if [ -n "$PID_DIR" ] && [ ! -e "$PID_DIR" ]; then
+    mkdir -p "$PID_DIR" && chown "$CC_SERVICE_USER":"$CC_SERVICE_GROUP" "$PID_DIR"
+  fi
+
+  # Ensure that the PID file exists (it is cleaned up at OS start time)
+  if [ -n "$PID_FILE" ] && [ ! -e "$PID_FILE" ]; then
+    touch "$PID_FILE" && chown "$CC_SERVICE_USER":"$CC_SREVICE_GROUP" "$PID_FILE"
+  fi
+
+  start-stop-daemon --start --background --make-pidfile --pidfile "$PID_FILE" --user "$CC_SERVICE_USER" --group "$CC_SERVICE_GROUP" --chdir "$CC_SERVICE_HOME" --chuid "$CC_SERVICE_USER":$CC_SERVICE_GROUP --exec $JAVA -- $CC_SERVICE_ARGS
+  result=$?
+
+  log_end_msg $result
+  exit $result
+}
+
+# function to stop the service
+function stop_service()
+{
+  log_daemon_msg "Stopping microservice $CC_SERVICE_NAME"
+
+  pidofproc -p "${PID_FILE}" "${CC_SERVICE_NAME}" > /dev/null
+  if [ $? -ne 0 ]; then
+    pid=$(pgrep -f "${basename}.*.jar")
+    if [ -n "$pid" ]; then
+      log_warning_msg "Can't read ${PID_FILE} but found ${CC_SERVICE_NAME} running with $pid... It will be killed."
+      # re-create PID_FILE
+      echo $pid > ${PID_FILE}
+      if [ ! -f $PID_FILE ]; then
+        log_warning_msg "Error writing pid: ${pid} to ${PID_FILE}"
+      fi
+      chown "$CC_SERVICE_USER":"$CC_SERVICE_GROUP" "$PID_FILE"
+      if [ $? -ne 0 ]; then
+        log_warning_msg "Error changing ownership: ${CC_SERVICE_USER}:${CC_SERVICE_GROUP} on ${PID_FILE}"
+      fi
+    else
+      log_warning_msg "Service ${CC_SERVICE_NAME} is not started"
+      return 0
+    fi
+  fi
+
+  #killproc -p "${PID_FILE}" "${CC_SERVICE_NAME}"
+  start-stop-daemon --stop --oknodo --pidfile "$PID_FILE" --retry=TERM/${KILL_TIMEOUT}/KILL/${KILL_RETRY_INTERVAL} && rm -f "${PID_FILE}"
+  log_end_msg $?
+}
+
+function restart_service()
+{
+  local result
+  stop_service
+  result=$?
+
+  if [ $result -eq 0 ]; then
+    start_service
+    result=$?
+  fi
+
+  return $result
+}
+
+function status_service()
+{
+  status_of_proc -p "${PID_FILE}" "${CC_SERVICE_NAME}" "${CC_SERVICE_NAME}" && exit 0
+  pid=$(pgrep -f "${basename}.*.jar")
+  if [ -n "$pid" ]; then
+    log_warning_msg "Can't read ${PID_FILE} but ${CC_SERVICE_NAME} is still running with $pid."
+    echo ${pid} > ${PID_FILE}
+    chown "$CC_SERVICE_USER":"$CC_SREVICE_GROUP" "$PID_FILE"
+  fi
+}
+
+function usage_service()
+{
+  echo 'Usage: $0 [ start | restart | stop | status ]'
+  exit 1
+}
+
+checkJava
+case $1 in
+  start)
+    start_service
+    ;;
+  stop)
+    stop_service
+    ;;
+  restart)
+    restart_service
+    ;;
+  status)
+    status_service
+    ;;
+  *)
+    usage_service
+    ;;
+esac
