@@ -1,0 +1,170 @@
+{
+  "handler": "Microsoft.Compute.MultiVm",
+  "version": "0.0.1-preview",
+  "parameters": {
+    "basics": [
+      {
+        "name": "vmName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "VM name",
+        "toolTip": "The name of the VM",
+        "constraints": {
+          "required": true
+        }
+      },
+      {
+        "name": "adminUsername",
+        "type": "Microsoft.Compute.UserNameTextBox",
+        "label": "Username",
+        "toolTip": "Admin username for the virtual machines. Same Credientials is to SSH to the box.",
+        "constraints": {
+          "required": true
+        },
+        "osPlatform": "Linux"
+      },
+      {
+        "name": "SSHCredentials",
+        "type": "Microsoft.Compute.CredentialsCombo",
+        "label": {
+          "authenticationType": "Authentication type",
+          "password": "Password",
+          "confirmPassword": "Confirm password",
+          "sshPublicKey": "SSH public key"
+        },
+        "toolTip": {
+          "authenticationType": "",
+          "password": "",
+          "sshPublicKey": ""
+        },
+        "constraints": {
+          "required": true
+        },
+        "options": {
+          "hideConfirmation": false
+        },
+        "osPlatform": "Linux"
+      }
+    ],
+    "steps": [
+      {
+        "name": "UserInformation",
+        "label": "VM and User Information",
+        "subLabel": {
+          "preValidation": "Provide VM and user information",
+          "postValidation": "Done"
+        },
+        "bladeTitle": "VM and user settings",
+        "elements": [
+          {
+            "name": "vmSize",
+            "type": "Microsoft.Compute.SizeSelector",
+            "label": "Virtual machine size",
+            "toolTip": "The size of virtual machine to provision for each cluster node.",
+            "recommendedSizes": [
+              "Standard_D1_v2",
+              "Standard_D2_v2",
+              "Standard_D3_v2",
+              "Standard_D4_v2"
+            ],
+            "constraints": {
+              "allowedSizes": [
+                "Standard_D1_v2",
+                "Standard_D2_v2",
+                "Standard_D3_v2",
+                "Standard_D4_v2"
+              ]
+            },
+            "osPlatform": "Linux",
+            "imageReference": {
+              "publisher": "Canonical",
+              "offer": "UbuntuServer",
+              "sku": "14.04.4-LTS"
+            }
+          },
+          {
+            "name": "storageAccount",
+            "type": "Microsoft.Storage.StorageAccountSelector",
+            "label": "Select or create a storage account",
+            "toolTip": "The two Virtual Hard Disks (VHDs) for the VMs will be stored in this storage account.",
+            "constraints": {
+              "required": true,
+              "allowedTypes": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Standard_ZRS"
+              ]
+            },
+            "defaultValue": {
+              "type": "Standard_LRS"
+            }
+          },
+          {
+            "name": "lastName",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Last name",
+            "toolTip": "Your last name",
+            "defaultValue": "",
+            "constraints": {
+              "required": true,
+              "validationMessage": "Last name is required"
+            },
+            "options": { }
+          },
+          {
+            "name": "firstName",
+            "type": "Microsoft.Common.TextBox",
+            "label": "First name",
+            "toolTip": "Your First name",
+            "defaultValue": "",
+            "constraints": {
+              "required": true,
+              "validationMessage": "First name is required"
+            },
+            "options": { }
+          },
+          {
+            "name": "companyName",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Company Name",
+            "toolTip": "Your company name",
+            "defaultValue": "",
+            "constraints": {
+              "required": true,
+              "validationMessage": "Company Name is required"
+            },
+            "options": { }
+          },
+          {
+            "name": "ownerEmail",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Owner email",
+            "toolTip": "Owner email",
+            "defaultValue": "",
+            "constraints": {
+              "required": true,
+              "validationMessage": "Owner email is required"
+            },
+            "options": { }
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "vmName": "[basics('vmName')]",
+      "vmSize": "[steps('UserInformation').vmSize]",
+      "authenticationType": "[basics('SSHCredentials').authenticationType]",
+      "adminUsername": "[basics('adminUsername')]",
+      "adminPassword": "[basics('SSHCredentials').password]",
+      "sshKey": "[basics('SSHCredentials').sshPublicKey]",
+      "lastName": "[steps('UserInformation').lastName]",
+      "firstName": "[steps('UserInformation').firstName]",
+      "ownerEmail": "[steps('UserInformation').ownerEmail]",
+      "companyName": "[steps('UserInformation').companyName]",
+      "storageAccountNewOrExisting": "[steps('UserInformation').storageAccount.newOrExisting]",
+      "storageAccountName": "[steps('UserInformation').storageAccount.name]",
+      "storageAccountType": "[steps('UserInformation').storageAccount.type]",
+      "existingStorageAccountRG": "[steps('UserInformation').storageAccount.resourceGroup]"
+    }
+  }
+}

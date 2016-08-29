@@ -1,0 +1,353 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "User name for the Virtual Machine."
+      }
+    },
+    "authenticationType": {
+      "type": "string",
+      "allowedValues": [
+        "sshPublicKey",
+        "password"
+      ],
+      "defaultValue": "sshPublicKey",
+      "metadata": {
+        "description": "The ssh auth type you wihs yo use key/pass"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for the Virtual Machine."
+      },
+      "defaultValue": ""
+    },
+    "sshKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Public Key to ssh to machine with"
+      },
+      "defaultValue": ""
+    },
+    "vmName": {
+      "type": "string",
+      "defaultValue": "cc16-marketplace",
+      "metadata": {
+        "description": "String passed down to the Virtual Machine."
+      }
+    },
+    "lastName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "String passed down to the Virtual Machine."
+      }
+    },
+    "firstName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "String passed down to the Virtual Machine."
+      }
+    },
+    "companyName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "String passed down to the Virtual Machine."
+      }
+    },
+    "ownerEmail": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "String passed down to the Virtual Machine."
+      }
+    },
+    "phoneHomeEndpoint": {
+      "type": "string",
+      "defaultValue": "https://na1.cloudcruiser.com/",
+      "metadata": {
+        "description": "String passed down to the virtualMachine."
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D1_v2",
+      "metadata": {
+        "description": "VM size"
+      }
+    },
+    "ubuntuOSVersion": {
+      "type": "string",
+      "defaultValue": "14.04.4-LTS",
+      "allowedValues": [
+        "14.04.4-LTS"
+      ],
+      "metadata": {
+        "description": "The Ubuntu version for the VM. This will pick a fully patched image of this given Ubuntu version. Allowed values: 14.04.4-LTS."
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Storage Account. This has to be a uinique name, up to 24 chars, all lowercase."
+      }
+    },
+    "storageAccountNewOrExisting": {
+      "type": "string",
+      "defaultValue": "new",
+      "allowedValues": [
+        "new",
+        "existing"
+      ],
+      "metadata": {
+        "Description": "Indicates whether the Storage Account is new or existing"
+      }
+    },
+    "storageAccountType": {
+      "type": "string",
+      "metadata": {
+        "description": "The type of the Storage Account created"
+      },
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS"
+      ]
+    },
+    "existingStorageAccountRG": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource Group of the Existing storage account."
+      },
+      "defaultValue": ""
+    },
+    "artifactsBaseUrl": {
+      "type": "string",
+      "defaultValue": "https://raw.githubusercontent.com/CloudCruiser/azure_marketplace/master/azurerm/marketplace-azure/cc16-on-ubuntu",
+      "metadata": {
+        "description": "Base URL of the solution template gallery package"
+      }
+    },
+    "imageSourceType": {
+      "type": "string",
+      "defaultValue": "marketplace",
+      "allowedValues": [
+        "marketplace",
+        "vhd"
+      ],
+      "metadata": {
+        "description": "switch to decide if you deploy from a storage account vhd or marketplace offering"
+      }
+    }
+  },
+  "variables": {
+    "imagePublisher": "cloud-cruiser",
+    "imageOffer": "cloud-cruiser-16",
+    "imageSku": "cc16-1-0-5",
+    "osImageVhdUri": "https://cc16marketplace.blob.core.windows.net/images/agent_service-1.0.5-2-osDisk.e776c31c-338d-43e0-869a-a2f96a01d23d.vhd",
+    "nicName": "[concat('cc16-netif1-', uniquestring(resourceGroup().id))]",
+    "deployments-api-version": "2016-02-01",
+    "storage-api-version": "2015-06-15",
+    "virtualNetworkName": "[concat('cc16-vnet-', uniquestring(resourceGroup().id))]",
+    "publicIPAddressName": "[concat('cc16-publicip-', uniquestring(resourceGroup().id))]",
+    "addressPrefix": "10.0.0.0/16",
+    "subnet1Name": "[concat('cc16-subnet1-', uniquestring(resourceGroup().id))]",
+    "subnet1Prefix": "10.0.0.0/24",
+    "vmStorageAccountContainerName": "vhds",
+    "osType": "Linux",
+    "publicIPAddressType": "Dynamic",
+    "storageAccountType": "Standard_LRS",
+    "sshKeyPath": "[concat('/home/',parameters('adminUsername'),'/.ssh/authorized_keys')]",
+    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
+    "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',variables('subnet1Name'))]",
+    "apiVersion": "2015-06-15",
+    "dnsLabelPrefix": "[concat('dns', uniquestring(resourceGroup().id))]",
+    "customData": "[concat('TENANT_FIRST_NAME|', base64(parameters('firstName')), '&', 'TENANT_LAST_NAME|', base64(parameters('lastName')), '&', 'TENANT_OWNER_EMAIL|', base64(parameters('ownerEmail')), '&', 'TENANT_NAME|', base64(parameters('companyName')), '&', 'PHONE_HOME_ENDPOINT|', base64(parameters('phoneHomeEndpoint')))]",
+    "baseUrl": "[concat(parameters('artifactsBaseUrl'), '/')]",
+    "virtualMachineTemplateURL": "[concat(variables('baseUrl'), 'virtualMachine-',parameters('authenticationType'), '-', parameters('imageSourceType'),'.json')]",
+    "storageAccountSetupURL": "[concat(variables('baseUrl'),'storageAccount-', parameters('storageAccountNewOrExisting'),'.json')]"
+  },
+  "resources": [
+    {
+      "name": "storageAccountSetup",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "[variables('deployments-api-version')]",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('storageAccountSetupURL')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "storage-api-version": {
+            "value": "[variables('storage-api-version')]"
+          },
+          "location": {
+            "value": "[resourceGroup().location]"
+          },
+          "storageAccountType": {
+            "value": "[parameters('storageAccountType')]"
+          },
+          "storageAccountName": {
+            "value": "[parameters('storageAccountName')]"
+          },
+          "storageAccountExistingRG": {
+            "value": "[parameters('existingStorageAccountRG')]"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('publicIPAddressName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('dnsLabelPrefix')]"
+        }
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnet1Name')]",
+            "properties": {
+              "addressPrefix": "[variables('subnet1Prefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('nicName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+              },
+              "subnet": {
+                "id": "[variables('subnet1Ref')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ccVMDeployment",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "[variables('deployments-api-version')]",
+      "dependsOn": [
+        "storageAccountSetup",
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('virtualMachineTemplateURL')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "vmName": {
+            "value": "[parameters('vmName')]"
+          },
+          "location": {
+            "value": "[resourceGroup().location]"
+          },
+          "storageAccountName": {
+            "value": "[parameters('storageAccountName')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "osType": {
+            "value": "[variables('osType')]"
+          },
+          "sshPublicKey": {
+            "value": "[parameters('sshKey')]"
+          },
+          "sshKeyPath": {
+            "value": "[variables('sshKeyPath')]"
+          },
+          "vmSize": {
+            "value": "[parameters('vmSize')]"
+          },
+          "nicName": {
+            "value": "[variables('nicName')]"
+          },
+          "customData": {
+            "value": "[variables('customData')]"
+          },
+          "virtualMachinesApiVersion": {
+            "value": "[variables('apiVersion')]"
+          },
+          "vmExtensionsApiVersion": {
+            "value": "[variables('apiVersion')]"
+          },
+          "imagePublisher": {
+            "value": "[variables('imagePublisher')]"
+          },
+          "imageOffer": {
+            "value": "[variables('imageOffer')]"
+          },
+          "imageSku": {
+            "value": "[variables('imageSku')]"
+          },
+          "osImageVhdUri": {
+            "value": "[variables('osImageVhdUri')]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(parameters('vmName'), '/install_ccruiser')]",
+      "apiVersion": "2016-03-30",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [ "ccVMDeployment" ],
+      "properties": {
+        "publisher": "Microsoft.OSTCExtensions",
+        "type": "CustomScriptForLinux",
+        "typeHandlerVersion": "1.4",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris": [
+            "https://raw.githubusercontent.com/CloudCruiser/azure_marketplace/develop/azurerm/marketplace-azure/cc16-on-ubuntu/service_setup.sh"
+          ],
+          "commandToExecute": "bash service_setup.sh"
+        }
+      }
+    }
+  ]
+}
