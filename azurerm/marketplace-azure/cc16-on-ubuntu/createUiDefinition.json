@@ -16,7 +16,7 @@
         "name": "adminUsername",
         "type": "Microsoft.Compute.UserNameTextBox",
         "label": "Username",
-        "toolTip": "Admin username for the virtual machines. Same Credientials is to SSH to the box.",
+        "toolTip": "Admin username for the virtual machines. These credentials are used to SSH to the box.",
         "constraints": {
           "required": true
         },
@@ -143,6 +143,7 @@
             "defaultValue": "",
             "constraints": {
               "required": true,
+              "regex": "/@/",
               "validationMessage": "Owner email is required"
             },
             "options": { }
@@ -164,7 +165,8 @@
       "storageAccountNewOrExisting": "[steps('UserInformation').storageAccount.newOrExisting]",
       "storageAccountName": "[steps('UserInformation').storageAccount.name]",
       "storageAccountType": "[steps('UserInformation').storageAccount.type]",
-      "existingStorageAccountRG": "[steps('UserInformation').storageAccount.resourceGroup]"
+      "existingStorageAccountRG": "[steps('UserInformation').storageAccount.resourceGroup]",
+      "location": "[location()]"
     }
   }
 }
