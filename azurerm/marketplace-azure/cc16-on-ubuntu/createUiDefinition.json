@@ -9,7 +9,9 @@
         "label": "VM name",
         "toolTip": "The name of the VM",
         "constraints": {
-          "required": true
+          "required": true,
+          "regex": "([a-zA-Z0-9\\-]){1,64}",
+          "validationMessage": "vm name must be alphanumeric and =< 64 chars"
         }
       },
       {
